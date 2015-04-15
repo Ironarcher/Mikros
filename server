@@ -1,0 +1,14 @@
+import praw
+import urllib2
+
+def testGet(){
+	submissions = r.get_subreddit('futurology').get_top(limit=10);
+	print(submissions)
+}
+
+def main():
+	r = praw.Reddit(user_agent='Mikros')
+	testget()
+
+if __name__ == "__main__":
+	main();
