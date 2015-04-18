@@ -2,6 +2,8 @@ import praw
 import urllib2
 import tweepy
 import string
+import math
+from operator import attrgetter
 from datetime import datetime
 from pprint import pprint
 
@@ -21,7 +23,7 @@ class infoObj:
 	source = Source.plaintext
 	popularity = 0
 	datepostedutc = ""
-
+	algscore = 0
 	#Add date created at source
 	def __init__(self, titlein, linkin, sourcein):
 		self.title = titlein
@@ -67,20 +69,14 @@ def getTwitterInfo(userin, amt):
 	return stack
 
 def sourceSort(sourcestack):
-	sourcestackamt = []
+	univ = 100 #used for balancing the algorithm to be more readable
 	for obj in sourcestack:
 		if obj.source == Source.twitter:
 			multiplier = 0.5
 		else:
 			multiplier = 1
-		score = (multiplier * obj.popularity * 3600)/getInfoAge(obj.datepostedutc, obj.source)
-		print(multiplier * obj.popularity * 3600)
-		print(obj.popularity)
-		print("Algorithm score: " + str(score))
-		sourcestackamt.append(score)
-
-	#Change to return soucestackamt
-	return score
+		obj.algscore = (multiplier * math.sqrt(obj.popularity) * 3600 * univ)/getInfoAge(obj.datepostedutc, obj.source)
+	return sorted(sourcestack, key=attrgetter("algscore"), reverse=True)
 
 #Input is a string of the datetime in the UTC format
 #Returns seconds ago a source was posted
@@ -91,7 +87,9 @@ def main():
 	#Examples:
 	#test = getRedditInfo("futurology", 1)
 	#print(test[0].popularity)
-	#print(sourceSort(getTwitterInfo("elonmusk", 1)))
+	sr = sourceSort(getTwitterInfo("elonmusk", 10))
+	for x in range(0,10):
+		print(sr[x].algscore)
 
 if __name__ == "__main__":
 	main()
