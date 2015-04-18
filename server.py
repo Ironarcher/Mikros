@@ -1,5 +1,8 @@
 import praw
 import urllib2
+import tweepy
+import string
+from datetime import datetime
 from pprint import pprint
 
 class Source:
@@ -10,39 +13,85 @@ class Source:
 	ap = 4
 
 class infoObj:
+	author = ""
 	title = ""
 	link = ""
 	thumbnail = ""
 	body = ""
-	source = Source.plaintext;
-	popularity = 0;
+	source = Source.plaintext
+	popularity = 0
+	datepostedutc = ""
+
 	#Add date created at source
 	def __init__(self, titlein, linkin, sourcein):
-		title = titlein
-		link = linkin
-		source = sourcein
+		self.title = titlein
+		self.link = linkin
+		self.source = sourcein
 
 def getRedditInfo(subin, amt):
 	r = praw.Reddit(user_agent='Mikros Server Application: Providing submissions information for the latest interesting internet headlines')
 	stack = []
 	subreddit = r.get_subreddit(subin)
+
 	for submission in subreddit.get_top_from_day(limit=amt):
 		obj = infoObj(submission.title, submission.short_link, Source.reddit)
 		obj.popularity = submission.ups
+		obj.author = submission.author
 		if submission.thumbnail != "self": 
 			obj.thumbnail = submission.thumbnail
 		else:
 			body = submission.selftext
 		stack.append(obj);
-	return stack;
 
-def getTwitterInfo(userin):
+	return stack
+
+def getTwitterInfo(userin, amt):
+	CONSUMER_KEY = "Td1M6AcsRbwzGYKRb5484LZFd"
+	CONSUMER_SECRET = "JVCH1ZgIAILiBAhoJLq9rGRYsVLaDz2ZOzebrBVEwsKdD2K9yp"
 	stack = []
-	return stack;
+	auth = tweepy.AppAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
+	api = tweepy.API(auth);
+
+	for status in tweepy.Cursor(api.user_timeline, id=userin, exclude_replies="true", include_rts="false").items(amt):
+		obj = infoObj("", "https://twitter.com/statuses/"+str(status.id), Source.twitter)
+		#for retweets: status.retweeted_status
+		obj.body = status.text
+		obj.thumbnail = status.user.profile_image_url
+		obj.author = status.user.name
+		obj.datepostedutc = status.created_at
+		if status.retweeted == True:
+			print("error")
+		else:
+			obj.popularity = status.retweet_count + status.favorite_count
+		stack.append(obj)
+	return stack
+
+def sourceSort(sourcestack):
+	sourcestackamt = []
+	for obj in sourcestack:
+		if obj.source == Source.twitter:
+			multiplier = 0.5
+		else:
+			multiplier = 1
+		score = (multiplier * obj.popularity * 3600)/getInfoAge(obj.datepostedutc, obj.source)
+		print(multiplier * obj.popularity * 3600)
+		print(obj.popularity)
+		print("Algorithm score: " + str(score))
+		sourcestackamt.append(score)
+
+	#Change to return soucestackamt
+	return score
+
+#Input is a string of the datetime in the UTC format
+#Returns seconds ago a source was posted
+def getInfoAge(inputa, sourcetype):
+	return (datetime.utcnow() - inputa).total_seconds()
 
 def main():
-	test = getRedditInfo("futurology", 1)
-	print(test[0].popularity)
+	#Examples:
+	#test = getRedditInfo("futurology", 1)
+	#print(test[0].popularity)
+	#print(sourceSort(getTwitterInfo("elonmusk", 1)))
 
 if __name__ == "__main__":
 	main()
