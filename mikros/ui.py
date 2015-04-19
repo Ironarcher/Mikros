@@ -1,0 +1,15 @@
+import mikros.server
+import kivy
+kivy.require("1.9.0")
+
+from kivy.app import App
+from kivy.uix.label import Label
+from kivy.uix.widget import Widget
+
+class UIApp(App):
+
+	def build(self):
+		return Label(text="Hello World!")
+
+if __name__ == "__main__":
+	UIApp().run()
