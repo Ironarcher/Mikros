@@ -1,0 +1,25 @@
+#:kivy 1.9.0
+
+<Bubble>:
+	size: 100, 20
+	Label:
+		font_size: 12
+		pos: self.pos
+		size: self.size
+		text: "test"
+
+<MainLayout>:
+	orientation: 'lr-tb'
+	TextInput:
+		id: my_textinput
+		font_size: 12
+		text: "default"
+	Button:
+		text: "button1"
+	Button:
+		text: "button2"
+	
+
+<UIApp>:
+	canvas:
+
