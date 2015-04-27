@@ -1,5 +1,6 @@
 from socket import *
 from thread import *
+import pickle
 
 import MySQLdb as mdb
 import sys
@@ -11,6 +12,25 @@ class Source:
 	googleplus = 3
 	ap = 4
 	youtube = 5
+
+class infoObj:
+	author = ""
+	title = ""
+	link = ""
+	thumbnail = ""
+	body = ""
+	source = Source.plaintext
+	popularity = 0
+	datepostedutc = ""
+	algscore = 0
+	#Add date created at source
+	def __init__(self, titlein, linkin, sourcein):
+		self.title = titlein
+		self.link = linkin
+		self.source = sourcein
+
+def pickleInfoObj(info):
+	return pickle.dumps(info)
 
 def receive(conn):
 	packet = conn.recv(1024)
@@ -114,7 +134,9 @@ def getArticles(limit):
 		rows = cur.fetchall()
 		print("Fetched resulting articles for user")
 		#Put into source class from the desc using 
-		#for row in rows:
+		for row in rows:
+			#Select source with 
+			obj = infoObj(row[2])
 			
 def main():
 	#Initialize the database
