@@ -3,6 +3,9 @@ import urllib2
 import tweepy
 import string
 import math
+import urllib2
+import json
+import xmltodict
 from apiclient.discovery import build
 from apiclient.errors import HttpError
 from operator import attrgetter
@@ -16,6 +19,12 @@ class Source:
 	googleplus = 3
 	ap = 4
 	youtube = 5
+	usatoday = 6
+
+class Category:
+	none = 0
+	science = 1
+	cooking = 2
 
 class infoObj:
 	author = ""
@@ -27,11 +36,25 @@ class infoObj:
 	popularity = 0
 	datepostedutc = ""
 	algscore = 0
+	infoid = 0
+	category = Category.none
 	#Add date created at source
 	def __init__(self, titlein, linkin, sourcein):
 		self.title = titlein
 		self.link = linkin
 		self.source = sourcein
+
+def getUsaTodayInfo(amt):
+	apikey = "87r3b9p8z8xmpyhefhsfar4v"
+	url = "http://api.usatoday.com/open/articles/topnews/tech?api_key=" + apikey
+	contents = urllib2.urlopen(url)
+	data = xmltodict.parse(contents)
+	for articles in data['channel']['item']:
+		pass
+		
+def getNytimesInfo(amt):
+	apikey = "869383e665d02b1daedba543139595fb:19:71871736"
+	pass
 
 def getRedditInfo(subin, amt):
 	r = praw.Reddit(user_agent='Mikros Server Application: Providing submissions information for the latest interesting internet headlines')
@@ -58,9 +81,9 @@ def getTwitterInfo(userin, amt):
 	api = tweepy.API(auth);
 
 	for status in tweepy.Cursor(api.user_timeline, id=userin, exclude_replies="true", include_rts="false").items(amt):
-		obj = infoObj("", "https://twitter.com/statuses/"+str(status.id), Source.twitter)
+		obj = infoObj(status.text, "https://twitter.com/statuses/"+str(status.id), Source.twitter)
 		#for retweets: status.retweeted_status
-		obj.body = status.text
+		#Omit infoObj body
 		obj.thumbnail = status.user.profile_image_url
 		obj.author = status.user.name
 		obj.datepostedutc = status.created_at
@@ -135,6 +158,15 @@ def sourceSort(sourcestack):
 			multiplier = 1
 		obj.algscore = (multiplier * math.sqrt(obj.popularity) * 3600 * univ)/getInfoAge(obj.datepostedutc, obj.source)
 	return sorted(sourcestack, key=attrgetter("algscore"), reverse=True)
+
+def setAlgScore(obj):
+	if obj.datepostedutc is not None and obj.popularity is not None:
+		univ = 100
+		if obj.source == Source.twitter:
+			multiplier = 0.5
+		else:
+			multiplier = 1
+		obj.algscore = (multiplier * math.sqrt(obj.popularity) * 3600 * univ)/getInfoAge(obj.datepostedutc, obj.source)
 
 #Input is a string of the datetime in the UTC format
 #Returns seconds ago a source was posted
