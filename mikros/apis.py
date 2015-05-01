@@ -6,11 +6,13 @@ import math
 import urllib2
 import json
 import xmltodict
+
 from apiclient.discovery import build
 from apiclient.errors import HttpError
 from operator import attrgetter
 from datetime import datetime
 from pprint import pprint
+import HTMLParser
 
 class Source:
 	plaintext = 0
@@ -36,13 +38,15 @@ class infoObj:
 	popularity = 0
 	datepostedutc = ""
 	algscore = 0
-	infoid = 0
 	category = Category.none
 	#Add date created at source
 	def __init__(self, titlein, linkin, sourcein):
 		self.title = titlein
 		self.link = linkin
 		self.source = sourcein
+
+def utf8toASCII(str1):
+	return str1.encode('ascii', 'ignore')
 
 def getUsaTodayInfo(amt):
 	apikey = "87r3b9p8z8xmpyhefhsfar4v"
@@ -62,9 +66,10 @@ def getRedditInfo(subin, amt):
 	subreddit = r.get_subreddit(subin)
 
 	for submission in subreddit.get_top_from_day(limit=amt):
-		obj = infoObj(submission.title, submission.short_link, Source.reddit)
+		obj = infoObj(utf8toASCII(submission.title), submission.short_link, Source.reddit)
 		obj.popularity = submission.ups
 		obj.author = submission.author
+		obj.datepostedutc = unixToDatetime(submission.created_utc)
 		if submission.thumbnail != "self": 
 			obj.thumbnail = submission.thumbnail
 		else:
@@ -172,6 +177,10 @@ def setAlgScore(obj):
 #Returns seconds ago a source was posted
 def getInfoAge(inputa, sourcetype):
 	return (datetime.utcnow() - inputa).total_seconds()
+
+def unixToDatetime(unix):
+	print(datetime.utcfromtimestamp(int(unix)))
+	return datetime.utcfromtimestamp(int(unix))
 
 def main():
 	#Examples:

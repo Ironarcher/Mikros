@@ -61,7 +61,11 @@ def receive(conn):
 		if packet[1] is not None and packet[2] is not None and packet[3] is not None:
 			verify = getCredentials(packet[1], packet[2])
 			if verify != "failure":
-				response = pickleInfoObj(getArticles(packet[3]))
+				response = ""
+				data = getArticles(packet[3])
+				for i in data:
+					temp = pickleInfoObj(i) + "%s"
+					response += temp
 		response = ""
 	elif packet[0] =="3":
 		#Type: Use credentials to get list of sources from selected category
@@ -93,6 +97,9 @@ def receive(conn):
 		response = ""
 	elif packet[0] == "9":
 		#Type: Use credentials to modify email address
+		response = ""
+	elif packet[0] == "10":
+		#Add a new followed category
 		response = ""
 	else:
 		response = ""
@@ -144,6 +151,7 @@ def createUser(username, password, email):
 def getFollowedCategories(userid):
 	with con:
 		cur = con.cursor()
+		cur.execute("SELECT category FROM users WHERE id = %s", (userid))
 
 def getAllCategories():
 	a = Category()
@@ -158,9 +166,10 @@ def getCategoryFromString(string):
 		return Category.none		
 
 def getArticles(categorytype):
+	stack = []
 	with con:
 		cur = con.cursor()
-		strused = "SELECT * FROM articles ORDER BY algscore LIMIT 20 WHERE category = %s"
+		strused = "SELECT * FROM articles ORDER BY algscore LIMIT 10 WHERE category = %s"
 		cur.execute(strused, (getCategoryFromString(categorytype)))
 		rows = cur.fetchall()
 		print("Fetched resulting articles for user")
@@ -189,6 +198,8 @@ def getArticles(categorytype):
 			obj.datepostedutc = row[8]
 			obj.algscore = row[9]
 			obj.category = categorytype
+			stack.append(obj)
+	return stack
 
 def addArticle(info):
 	if info.source == Source.reddit:
@@ -210,6 +221,19 @@ def addArticle(info):
 		cur = con.cursor()
 		cur.execute("SELECT COUNT(1) FROM articles WHERE title = %s", (info.title))
 		if not cur.fetchone()[0]:
+			#check limits here
+			if(len(info.author) > 45):
+				info.author = info.author[0:42] + "..."
+			if(len(info.title) > 400):
+				info.title = info.title[0:397] + "..."
+			if(len(info.link) > 400):
+				#TO-DO: Insert url shortener here
+			if(len(info.thumbnail) > 500):
+				#TO-DO: Insert url shortener here
+			if(len(info.body) > 16,777,215):
+				info.title = info.title[0:16,777,212] + "..."
+			#Impossible to be bigger than BIGINT(20) and float (1.79E308 max) for popularity and algscore
+
 			cur.execute("INSERT INTO articles(author, title, link, thumbnail, body, source, popularity, datepostedutc, algscore, category) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
 				(info.author, info.title, info.link, info.thumbnail, info.body, sourcetype, info.popularity, info.datepostedutc, info.algscore, info.category))
 		else:
@@ -238,13 +262,14 @@ def setInterval(interval):
 
             t = threading.Thread(target=loop)
             t.daemon = True # stop if the program exits
+            function(*args, **kwargs)
             t.start()
             return stopped
         return wrapper
     return decorator
 
 #Interval for 15 minutes: 900
-#@setInterval(30)
+@setInterval(900)
 def updateTwitter():
 	sources = getSourcesFromFile("twitter")
 	for source in sources:
@@ -259,9 +284,22 @@ def updateTwitter():
 					addArticle(obj)
 				break
 
+#Interval for 30 minutes: 1800
 @setInterval(10)
-def updateSources():
-	print('hello')
+def updateReddit():
+	print("updating")
+	sources = getSourcesFromFile("reddit")
+	for source in sources:
+		print(source)
+		for b in getAllCategories():
+			if b in source:
+				usedstr = string.replace(source, b + ": ", "")
+				stack = apis.getRedditInfo(usedstr, 10)
+				for obj in stack:
+					apis.setAlgScore(obj)
+					obj.category = getCategoryFromString(b)
+					addArticle(obj)
+				break
 			
 def main():
 	#Initialize the database
@@ -283,6 +321,7 @@ def main():
 	#print(getCredentials("test3", "standard")
 	
 	updateTwitter()
+	updateReddit()
 	print('done')
 
 	s = socket()
