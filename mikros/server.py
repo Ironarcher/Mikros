@@ -6,6 +6,7 @@ import time
 import apis
 import os
 import string
+from . import *
 
 import MySQLdb as mdb
 import sys
@@ -30,7 +31,7 @@ class infoObj:
 	link = ""
 	thumbnail = ""
 	body = ""
-	source = Source.plaintext
+	source = source.Source.plaintext
 	popularity = 0
 	datepostedutc = ""
 	algscore = 0
@@ -153,44 +154,19 @@ def getFollowedCategories(userid):
 		cur = con.cursor()
 		cur.execute("SELECT category FROM users WHERE id = %s", (userid))
 
-def getAllCategories():
-	a = Category()
-	return [attr for attr in dir(a) if not attr.startswith("__")]
-
-def getCategoryFromString(string):
-	if string == "science":
-		return Category.science
-	elif string == "cooking":
-		return Category.science
-	else:
-		return Category.none		
-
 def getArticles(categorytype):
 	stack = []
 	with con:
 		cur = con.cursor()
 		strused = "SELECT * FROM articles ORDER BY algscore LIMIT 10 WHERE category = %s"
-		cur.execute(strused, (getCategoryFromString(categorytype)))
+		cur.execute(strused, (Commons.getCategoryFromString(categorytype)))
 		rows = cur.fetchall()
 		print("Fetched resulting articles for user")
 		#Put into source class from the desc using 
 		for row in rows:
-			if row[6] == "plaintext":
-				sourcetype = Source.plaintext
-			elif row[6] == "reddit":
-				sourcetype = Source.reddit
-			elif row[6] == "twitter":
-				sourcetype = Source.twitter
-			elif row[6] == "googleplus":
-				sourcetype = Source.googleplus
-			elif row[6] == "ap":
-				sourcetype = Source.ap
-			elif row[6] == "youtube":
-				sourcetype = Source.youtube
-			else:
-				sourcetype = Source.plaintext
+			sourcetype = Commons.StringToSource(row[6])
 			#Select source with 
-			obj = infoObj(row[2], row[3], sourcetype)
+			obj = Commons.infoObj(row[2], row[3], sourcetype)
 			obj.author = row[1]
 			obj.thumbnail = row[4]
 			obj.body = row[5]
@@ -202,21 +178,7 @@ def getArticles(categorytype):
 	return stack
 
 def addArticle(info):
-	if info.source == Source.reddit:
-		sourcetype = "reddit"
-	elif info.source == Source.twitter:
-		sourcetype = "twitter"
-	elif info.source == Source.googleplus:
-		sourcetype = "googleplus"
-	elif info.source == Source.ap:
-		sourcetype = "ap"
-	elif info.source == Source.plaintext:
-		sourcetype = "plaintext"
-	elif info.source == Source.youtube:
-		sourcetype = "youtube"
-	else:
-		sourcetype = "plaintext"
-
+	sourcetype = Commons.SourcetoString(info.source)
 	with con:
 		cur = con.cursor()
 		cur.execute("SELECT COUNT(1) FROM articles WHERE title = %s", (info.title))
@@ -274,13 +236,13 @@ def updateTwitter():
 	sources = getSourcesFromFile("twitter")
 	for source in sources:
 		print(source)
-		for b in getAllCategories():
+		for b in Commons.getAllCategories():
 			if b in source:
 				usedstr = string.replace(source, b + ": ", "")
 				stack = apis.getTwitterInfo(usedstr, 10)
 				for obj in stack:
 					apis.setAlgScore(obj)
-					obj.category = getCategoryFromString(b)
+					obj.category = Commons.getCategoryFromString(b)
 					addArticle(obj)
 				break
 
@@ -291,13 +253,13 @@ def updateReddit():
 	sources = getSourcesFromFile("reddit")
 	for source in sources:
 		print(source)
-		for b in getAllCategories():
+		for b in Commons.getAllCategories():
 			if b in source:
 				usedstr = string.replace(source, b + ": ", "")
 				stack = apis.getRedditInfo(usedstr, 10)
 				for obj in stack:
 					apis.setAlgScore(obj)
-					obj.category = getCategoryFromString(b)
+					obj.category = Commons.getCategoryFromString(b)
 					addArticle(obj)
 				break
 			

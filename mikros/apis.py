@@ -6,6 +6,7 @@ import math
 import urllib2
 import json
 import xmltodict
+from . import *
 
 from apiclient.discovery import build
 from apiclient.errors import HttpError
@@ -66,7 +67,7 @@ def getRedditInfo(subin, amt):
 	subreddit = r.get_subreddit(subin)
 
 	for submission in subreddit.get_top_from_day(limit=amt):
-		obj = infoObj(utf8toASCII(submission.title), submission.short_link, Source.reddit)
+		obj = infoObj(utf8toASCII(submission.title), submission.short_link, Commons.Source.reddit)
 		obj.popularity = submission.ups
 		obj.author = submission.author
 		obj.datepostedutc = unixToDatetime(submission.created_utc)
@@ -86,7 +87,7 @@ def getTwitterInfo(userin, amt):
 	api = tweepy.API(auth);
 
 	for status in tweepy.Cursor(api.user_timeline, id=userin, exclude_replies="true", include_rts="false").items(amt):
-		obj = infoObj(status.text, "https://twitter.com/statuses/"+str(status.id), Source.twitter)
+		obj = infoObj(status.text, "https://twitter.com/statuses/"+str(status.id), Commons.Source.twitter)
 		#for retweets: status.retweeted_status
 		#Omit infoObj body
 		obj.thumbnail = status.user.profile_image_url
@@ -115,7 +116,7 @@ def getVideo_Playlist(playlist_id, amt):
 	for playlist_item in playlistitems_list_response["items"]:
    		vid = infoObj(playlist_item["snippet"]["title"],
     	"https://www.youtube.com/watch?v=" + playlist_item["snippet"]["resourceId"]["videoId"],
-    	Source.youtube)
+    	Commons.Source.youtube)
     	vid.ident = playlist_item["snippet"]["resourceId"]["videoId"]
     	vid.author = playlist_item["snippet"]["channelTitle"]
     	videostack.append(vid)
@@ -157,7 +158,7 @@ def getVideos_id(userid, amt):
 def sourceSort(sourcestack):
 	univ = 100 #used for balancing the algorithm to be more readable
 	for obj in sourcestack:
-		if obj.source == Source.twitter:
+		if obj.source == Commons.Source.twitter:
 			multiplier = 0.5
 		else:
 			multiplier = 1
@@ -167,7 +168,7 @@ def sourceSort(sourcestack):
 def setAlgScore(obj):
 	if obj.datepostedutc is not None and obj.popularity is not None:
 		univ = 100
-		if obj.source == Source.twitter:
+		if obj.source == Commons.Source.twitter:
 			multiplier = 0.5
 		else:
 			multiplier = 1
