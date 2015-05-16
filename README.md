@@ -8,7 +8,7 @@ A quick collection of Internet headlines based on your interests
 - For iOS: Need an Apple computer
 
 # Dependencies to run server
-- Required: MySQL Server with the proper schema added, called "mikros"
+- Required: SQLlite Command Line tool (shell) downloadable from https://www.sqlite.org/download.html
 - Feedparser 5.2.0 (https://pypi.python.org/pypi/feedparser#downloads)
 - Tweepy (Twitter for Python)
 - Praw (python reddit API Wrapper)
